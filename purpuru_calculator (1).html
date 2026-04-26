@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ぷるぷるストレート — Reducer Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #f7f9f8;
+  --white:   #ffffff;
+  --border:  #d8ece8;
+  --border2: #b8ddd8;
+  --text:    #1a2a28;
+  --muted:   #7a9e9a;
+  --light:   #edf6f4;
+
+  /* ブランドカラー */
+  --emerald: #3db89a;
+  --emerald2:#2a9a80;
+  --emerald3:#e0f5f0;
+  --mauve:   #9a7ab8;
+  --mauve2:  #7a5a98;
+  --mauve3:  #f2eef8;
+
+  /* 薬剤カラー */
+  --h-color: #3ab8d8;   /* ぷるぷるH 水色 */
+  --s-color: #e87090;   /* ぷるぷるS ピンク */
+  --w-color: #9ab8b0;   /* ぷるぷる水 グレー */
+
+  /* 成分カラー */
+  --tga-c:  #e07050;
+  --ac-c:   #c060a0;
+
+  --sans:  'Zen Kaku Gothic New', sans-serif;
+  --eng:   'Outfit', sans-serif;
+  --mono:  'DM Mono', monospace;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { background:var(--bg); }
+body { color:var(--text); font-family:var(--sans); min-height:100vh; padding-bottom:60px; }
+
+/* ── ヘッダー ── */
+header {
+  background:var(--white);
+  border-bottom:2px solid var(--emerald3);
+  padding:28px 20px 22px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+header::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:4px;
+  background:linear-gradient(90deg, var(--emerald), var(--mauve), var(--emerald));
+}
+.header-brand {
+  font-family:var(--eng);
+  font-size:10px; letter-spacing:.4em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:6px;
+  /* モーブブルーの影 */
+  text-shadow:1px 1px 0 rgba(154,122,184,.4), 2px 2px 0 rgba(58,184,216,.2);
+}
+.header-title {
+  font-family:var(--sans);
+  font-size:28px; font-weight:900; letter-spacing:.04em;
+  background:linear-gradient(135deg, var(--emerald2), var(--mauve));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:3px; line-height:1.2;
+}
+.header-sub {
+  font-family:var(--eng);
+  font-size:9px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--muted);
+}
+.header-badge {
+  display:inline-block;
+  background:var(--emerald3); border:1px solid var(--emerald);
+  color:var(--emerald2); font-size:9px; font-weight:700;
+  border-radius:20px; padding:2px 10px; margin-top:8px;
+  letter-spacing:.06em;
+}
+
+/* ── モード切り替え ── */
+.mode-tabs {
+  display:grid; grid-template-columns:1fr 1fr;
+  margin:16px 16px 0; border-radius:12px; overflow:hidden;
+  border:2px solid var(--border); max-width:560px; margin-left:auto; margin-right:auto;
+  box-shadow:0 2px 12px rgba(61,184,154,.1);
+}
+.mode-btn {
+  background:var(--white); border:none; padding:14px 12px;
+  font-family:var(--sans); font-size:13px; font-weight:700;
+  cursor:pointer; transition:all .2s; text-align:center;
+  color:var(--muted); line-height:1.4;
+}
+.mode-btn span { font-size:10px; font-weight:400; display:block; opacity:.7; margin-top:2px; }
+.mode-btn.active-a { background:var(--emerald); color:#fff; }
+.mode-btn.active-b { background:var(--mauve); color:#fff; }
+.mode-btn.active-a span, .mode-btn.active-b span { opacity:.85; }
+
+/* ── メイン ── */
+.main { max-width:560px; margin:0 auto; padding:20px 16px 0; }
+
+.sec-label {
+  font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px;
+  display:flex; align-items:center; gap:8px;
+}
+.sec-label::after { content:''; flex:1; height:1.5px; background:var(--border); }
+
+/* ── 薬剤カード ── */
+.drug-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px; }
+.drug-card {
+  background:var(--white); border:2px solid var(--border); border-radius:12px;
+  padding:12px 8px 10px; cursor:pointer; transition:all .18s;
+  text-align:center; user-select:none; position:relative;
+}
+.drug-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(61,184,154,.15); }
+.drug-card.selected { border-color:var(--card-color); background:var(--white); box-shadow:0 4px 18px rgba(0,0,0,.1); }
+.drug-card.selected .dc-dot { transform:scale(1.2); }
+.dc-dot {
+  width:36px; height:36px; border-radius:50%; background:var(--card-color,var(--emerald));
+  margin:0 auto 8px; transition:transform .18s;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:11px; font-weight:700; font-family:var(--eng);
+  opacity:.85;
+}
+.drug-card.selected .dc-dot { opacity:1; }
+.dc-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:2px; line-height:1.3; }
+.dc-sub  { font-size:9px; color:var(--muted); margin-bottom:3px; }
+.dc-conc { font-family:var(--mono); font-size:11px; color:var(--card-color,var(--muted)); font-weight:500; }
+.dc-badge {
+  position:absolute; top:5px; right:5px;
+  width:18px; height:18px; border-radius:50%;
+  background:var(--card-color); color:#fff; font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .15s;
+}
+.drug-card.selected .dc-badge { opacity:1; }
+
+/* ── 比率・入力 ── */
+.ratio-card {
+  background:var(--white); border:1.5px solid var(--border); border-radius:10px;
+  padding:14px 16px; margin-bottom:10px;
+  display:flex; align-items:center; gap:10px;
+}
+.ratio-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.ratio-name { flex:1; font-size:13px; font-weight:700; }
+.ratio-conc { font-family:var(--mono); font-size:10px; color:var(--muted); }
+.ratio-inp {
+  width:54px; background:var(--light); border:1.5px solid var(--border);
+  border-radius:6px; padding:7px 8px; font-family:var(--mono); font-size:18px;
+  font-weight:500; text-align:center; outline:none; transition:border-color .15s; color:var(--text);
+}
+.ratio-inp:focus { border-color:var(--emerald); }
+.ratio-colon { font-family:var(--mono); font-size:16px; color:var(--border2); }
+
+.field {
+  background:var(--white); border:1.5px solid var(--border); border-radius:10px;
+  padding:14px 18px 12px; margin-bottom:12px; transition:border-color .15s;
+}
+.field:focus-within { border-color:var(--emerald); box-shadow:0 0 0 3px rgba(61,184,154,.08); }
+.field label { display:block; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+.field-row { display:flex; align-items:baseline; gap:6px; }
+.field-row input { flex:1; background:none; border:none; color:var(--text); font-family:var(--mono); font-size:28px; font-weight:500; outline:none; min-width:0; }
+.field-row input::placeholder { color:#cce8e4; }
+.field-unit { font-family:var(--mono); font-size:14px; color:var(--muted); }
+
+/* ── 水の選択（任意） ── */
+.water-opt {
+  background:var(--white); border:1.5px dashed var(--border); border-radius:10px;
+  padding:12px 16px; margin-bottom:12px; cursor:pointer; transition:all .15s;
+  display:flex; align-items:center; gap:10px;
+}
+.water-opt.active { border-style:solid; border-color:var(--w-color); background:#f5f8f7; }
+.water-dot { width:10px; height:10px; border-radius:50%; background:var(--w-color); flex-shrink:0; }
+.water-check { width:20px; height:20px; border-radius:50%; border:2px solid var(--border); margin-left:auto; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; transition:all .15s; }
+.water-opt.active .water-check { background:var(--w-color); border-color:var(--w-color); color:#fff; }
+
+/* ── 計算ボタン ── */
+.calc-btn {
+  width:100%; border:none; border-radius:10px; padding:16px;
+  font-family:var(--sans); font-size:14px; font-weight:700; letter-spacing:.06em;
+  cursor:pointer; transition:all .18s; margin-bottom:12px;
+}
+.calc-btn-a { background:var(--emerald); color:#fff; }
+.calc-btn-a:hover { background:var(--emerald2); transform:translateY(-1px); box-shadow:0 6px 20px rgba(61,184,154,.3); }
+.calc-btn-b { background:var(--mauve); color:#fff; }
+.calc-btn-b:hover { background:var(--mauve2); transform:translateY(-1px); box-shadow:0 6px 20px rgba(154,122,184,.3); }
+.calc-btn:disabled { opacity:.35; cursor:not-allowed; transform:none !important; }
+
+.reset-btn {
+  width:100%; background:none; border:1.5px solid var(--border); border-radius:8px;
+  padding:10px; color:var(--muted); font-size:12px; font-weight:700;
+  cursor:pointer; transition:all .15s; margin-bottom:20px;
+}
+.reset-btn:hover { border-color:var(--emerald); color:var(--emerald); }
+
+/* ── 結果 ── */
+.result-panel {
+  border-radius:14px; overflow:hidden; margin-bottom:20px;
+  display:none; opacity:0; transform:translateY(8px);
+  transition:opacity .3s, transform .3s;
+}
+.result-panel.visible { display:block; }
+.result-panel.show { opacity:1; transform:translateY(0); }
+.result-panel.err { border:2px solid #f0a0a0; }
+
+.err-box { background:#fff5f5; padding:14px 18px; font-size:12px; color:#c05050; line-height:1.7; }
+
+.res-hero {
+  background:linear-gradient(135deg, var(--emerald2), var(--emerald));
+  padding:20px 22px;
+}
+.res-hero.mauve-hero { background:linear-gradient(135deg, var(--mauve2), var(--mauve)); }
+.res-hero-label { font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.7); margin-bottom:4px; }
+.res-hero-val { font-family:var(--mono); font-size:42px; font-weight:500; color:#fff; line-height:1; }
+.res-hero-unit { font-size:14px; color:rgba(255,255,255,.6); margin-left:4px; }
+
+.res-amounts {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  padding:14px 16px; background:var(--light);
+}
+.res-amt {
+  background:var(--white); border-radius:9px; padding:12px 14px;
+  border-left:3px solid var(--item-color,var(--emerald));
+}
+.res-amt-label { font-size:11px; font-weight:700; color:var(--item-color,var(--emerald)); margin-bottom:4px; }
+.res-amt-val { font-family:var(--mono); font-size:22px; font-weight:500; }
+.res-amt-unit { font-size:11px; color:var(--muted); margin-left:2px; }
+.res-amt-pct { font-size:10px; color:var(--muted); margin-top:2px; }
+
+.res-conc {
+  display:grid; grid-template-columns:1fr 1fr; gap:1px;
+  background:var(--border); border-top:1.5px solid var(--border);
+}
+.res-ci { background:var(--white); padding:12px 16px; }
+.res-ci-label { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+.res-ci-val { font-family:var(--mono); font-size:20px; font-weight:500; }
+.res-ci-unit { font-size:10px; color:var(--muted); margin-left:2px; }
+
+/* ── 注記 ── */
+.note { font-size:10px; color:var(--muted); line-height:1.9; border-top:1.5px solid var(--border); padding-top:14px; margin-top:4px; }
+
+/* ── Toast ── */
+#toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--text); color:#fff; padding:10px 22px; border-radius:20px; font-size:12px; font-weight:500; opacity:0; transition:all .3s; z-index:9000; white-space:nowrap; pointer-events:none; }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<header>
+  <div class="header-brand">VERY VERY inc.</div>
+  <div class="header-title">ぷるぷるストレート</div>
+  <div class="header-sub">Reducer Concentration Calculator</div>
+  <div class="header-badge">特許取得済</div>
+</header>
+
+<!-- モード切り替え -->
+<div class="mode-tabs">
+  <button class="mode-btn active-a" id="btn-a" onclick="switchMode('a')">
+    A. マニュアルから計算
+    <span>比率を入力して計算</span>
+  </button>
+  <button class="mode-btn" id="btn-b" onclick="switchMode('b')">
+    B. 還元値から計算
+    <span>目標濃度から逆算</span>
+  </button>
+</div>
+
+<div class="main">
+
+  <!-- 薬剤選択（共通） -->
+  <div class="sec-label" style="margin-top:4px">STEP 1　ぷるぷるシリーズを選択</div>
+  <div class="drug-grid">
+    <div class="drug-card" style="--card-color:var(--h-color)" onclick="toggleDrug('H',this)">
+      <div class="dc-badge">1</div>
+      <div class="dc-dot">H</div>
+      <div class="dc-name">ぷるぷるH</div>
+      <div class="dc-sub">還元剤</div>
+      <div class="dc-conc">TGA 7.0%</div>
+    </div>
+    <div class="drug-card" style="--card-color:var(--s-color)" onclick="toggleDrug('S',this)">
+      <div class="dc-badge">2</div>
+      <div class="dc-dot">S</div>
+      <div class="dc-name">ぷるぷるS</div>
+      <div class="dc-sub">還元剤</div>
+      <div class="dc-conc">アセチル 3.0%</div>
+    </div>
+    <div class="drug-card" style="--card-color:var(--w-color)" id="water-card" onclick="toggleDrug('W',this)">
+      <div class="dc-badge">減</div>
+      <div class="dc-dot" style="background:var(--w-color)">水</div>
+      <div class="dc-name">ぷるぷる水</div>
+      <div class="dc-sub">減力剤（任意）</div>
+      <div class="dc-conc">0.0%</div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       MODE A: マニュアル計算
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="mode-a">
+    <div class="sec-label">STEP 2　混合比率を入力</div>
+    <div id="a-ratio-area">
+      <div style="background:var(--emerald3);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--muted);text-align:center">
+        上のカードから薬剤を選択してください
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-top:16px">STEP 3　仕上がり総量を入力</div>
+    <div class="field">
+      <label>仕上がり総量</label>
+      <div class="field-row">
+        <input type="number" id="a-total" placeholder="100" min="1" oninput="onInputA()">
+        <span class="field-unit">g</span>
+      </div>
+    </div>
+
+    <button class="calc-btn calc-btn-a" id="calc-btn-a" onclick="calcA()" disabled>計算する</button>
+    <button class="reset-btn" onclick="resetAll()">✕ リセット</button>
+
+    <div class="result-panel" id="res-a">
+      <div id="res-a-err" class="err-box" style="display:none"></div>
+      <div id="res-a-ok">
+        <div class="res-hero">
+          <div class="res-hero-label">総還元剤濃度</div>
+          <div><span class="res-hero-val" id="a-total-conc">—</span><span class="res-hero-unit">%</span></div>
+        </div>
+        <div class="res-amounts" id="a-amounts"></div>
+        <div class="res-conc">
+          <div class="res-ci"><div class="res-ci-label" style="color:var(--tga-c)">チオグリコール酸 TGA</div><div class="res-ci-val" style="color:var(--tga-c)"><span id="a-tga">—</span><span class="res-ci-unit">%</span></div></div>
+          <div class="res-ci"><div class="res-ci-label" style="color:var(--ac-c)">アセチルシステイン</div><div class="res-ci-val" style="color:var(--ac-c)"><span id="a-ac">—</span><span class="res-ci-unit">%</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       MODE B: 還元値から逆算
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="mode-b" style="display:none">
+    <div class="sec-label" id="b-ratio-label" style="display:none">STEP 2　H と S の混合比率を入力</div>
+    <div id="b-ratio-area">
+      <div style="background:var(--mauve3);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--muted);text-align:center">
+        上のカードから薬剤を選択してください
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-top:16px">STEP 3　目標還元値と総量を入力</div>
+    <div class="field" style="border-color:var(--mauve);border-width:2px">
+      <label style="color:var(--mauve)">目標 総還元剤濃度（0.1 〜 7.0%）</label>
+      <div class="field-row">
+        <input type="number" id="b-target" placeholder="3.5" min="0.1" max="7.0" step="0.1" oninput="onInputB()">
+        <span class="field-unit">%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>仕上がり総量</label>
+      <div class="field-row">
+        <input type="number" id="b-total" placeholder="100" min="1" oninput="onInputB()">
+        <span class="field-unit">g</span>
+      </div>
+    </div>
+
+    <button class="calc-btn calc-btn-b" id="calc-btn-b" onclick="calcB()" disabled>逆算する</button>
+    <button class="reset-btn" onclick="resetAll()">✕ リセット</button>
+
+    <div class="result-panel" id="res-b">
+      <div id="res-b-err" class="err-box" style="display:none"></div>
+      <div id="res-b-ok">
+        <div class="res-hero mauve-hero">
+          <div class="res-hero-label">総還元剤濃度</div>
+          <div><span class="res-hero-val" id="b-total-conc">—</span><span class="res-hero-unit">%</span></div>
+        </div>
+        <div class="res-amounts" id="b-amounts"></div>
+        <div class="res-conc">
+          <div class="res-ci"><div class="res-ci-label" style="color:var(--tga-c)">チオグリコール酸 TGA</div><div class="res-ci-val" style="color:var(--tga-c)"><span id="b-tga">—</span><span class="res-ci-unit">%</span></div></div>
+          <div class="res-ci"><div class="res-ci-label" style="color:var(--ac-c)">アセチルシステイン</div><div class="res-ci-val" style="color:var(--ac-c)"><span id="b-ac">—</span><span class="res-ci-unit">%</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    ※ 有効成分濃度は公表値に基づいています。正確な処方は製品資料に従ってください。<br>
+    ※ ぷるぷる水は還元剤0%の減力剤です。比率に含めると総還元値が希釈されます。
+  </div>
+</div>
+
+<script>
+// ================================================================
+// 薬剤マスタ
+// ================================================================
+const DRUGS = {
+  H: { name:'ぷるぷるH', tga:7.0, ac:0,   color:'var(--h-color)', label:'H' },
+  S: { name:'ぷるぷるS', tga:0,   ac:3.0, color:'var(--s-color)', label:'S' },
+  W: { name:'ぷるぷる水',tga:0,   ac:0,   color:'var(--w-color)', label:'水' },
+};
+
+// ================================================================
+// 状態
+// ================================================================
+let mode = 'a';
+let selDrugs = [];   // ['H','S','W'] 最大2種（水含む）
+let ratios   = {};   // {H:1, S:1, W:0}
+
+// ================================================================
+// モード切り替え
+// ================================================================
+function switchMode(m){
+  mode = m;
+  document.getElementById('mode-a').style.display = m==='a'?'block':'none';
+  document.getElementById('mode-b').style.display = m==='b'?'block':'none';
+  document.getElementById('btn-a').className = 'mode-btn' + (m==='a'?' active-a':'');
+  document.getElementById('btn-b').className = 'mode-btn' + (m==='b'?' active-b':'');
+  resetResult();
+}
+
+// ================================================================
+// 薬剤選択
+// ================================================================
+function toggleDrug(key, el){
+  const idx = selDrugs.indexOf(key);
+  if(idx >= 0){
+    selDrugs.splice(idx,1);
+    delete ratios[key];
+    el.classList.remove('selected');
+  } else {
+    // 水以外は最大2種、水はオプション
+    const nonWater = selDrugs.filter(k=>k!=='W');
+    if(key !== 'W' && nonWater.length >= 2){ toast('ベース剤は最大2種です'); return; }
+    selDrugs.push(key);
+    ratios[key] = key==='W' ? 1 : 1;
+    el.classList.add('selected');
+    // バッジ番号更新
+    const nonW = selDrugs.filter(k=>k!=='W');
+    const num = nonW.indexOf(key)+1;
+    el.querySelector('.dc-badge').textContent = key==='W'?'減':num;
+  }
+  renderRatios();
+  resetResult();
+  updateBtns();
+}
+
+// ================================================================
+// 比率入力レンダリング（A/B共通）
+// ================================================================
+function renderRatios(){
+  // ── Aモード：全選択薬剤の比率を表示 ──
+  const elA = document.getElementById('a-ratio-area');
+  if(!selDrugs.length){
+    elA.innerHTML = `<div style="background:var(--emerald3);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--muted);text-align:center">上のカードから薬剤を選択してください</div>`;
+  } else {
+    elA.innerHTML = selDrugs.map((k,i)=>{
+      const d = DRUGS[k];
+      const colon = i < selDrugs.length-1 ? `<span class="ratio-colon">：</span>` : '';
+      return `<div class="ratio-card">
+        <div class="ratio-dot" style="background:${d.color}"></div>
+        <div>
+          <div class="ratio-name">${d.name}</div>
+          <div class="ratio-conc">${d.tga>0?'TGA '+d.tga+'%':d.ac>0?'アセチル '+d.ac+'%':'0%（減力剤）'}</div>
+        </div>
+        <input type="number" class="ratio-inp" id="a-ratio-${k}" value="${ratios[k]||1}" min="0"
+          oninput="ratios['${k}']=parseFloat(this.value)||0;resetResult();updateBtns()">
+        ${colon}
+      </div>`;
+    }).join('');
+  }
+
+  // ── Bモード：H+S両方選択時のみ比率表示 ──
+  const elB      = document.getElementById('b-ratio-area');
+  const lblB     = document.getElementById('b-ratio-label');
+  const baseKeys = selDrugs.filter(k=>k!=='W');
+  const showRatio= baseKeys.length === 2;
+
+  lblB.style.display = showRatio ? 'flex' : 'none';
+  if(!showRatio){
+    // 単品選択 or 未選択：比率エリア非表示
+    if(baseKeys.length===1){
+      const d = DRUGS[baseKeys[0]];
+      elB.innerHTML = `<div style="background:var(--mauve3);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <div class="ratio-dot" style="background:${d.color}"></div>
+        <div style="font-size:13px;font-weight:700">${d.name}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto">${d.tga>0?'TGA '+d.tga+'%':'アセチル '+d.ac+'%'}</div>
+      </div>`;
+    } else {
+      elB.innerHTML = `<div style="background:var(--mauve3);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--muted);text-align:center">上のカードから薬剤を選択してください<br><span style="font-size:10px;opacity:.7">H または S を選択 → ぷるぷる水の量を自動逆算します</span></div>`;
+    }
+  } else {
+    elB.innerHTML = baseKeys.map((k,i)=>{
+      const d = DRUGS[k];
+      const colon = i < baseKeys.length-1 ? `<span class="ratio-colon">：</span>` : '';
+      return `<div class="ratio-card">
+        <div class="ratio-dot" style="background:${d.color}"></div>
+        <div>
+          <div class="ratio-name">${d.name}</div>
+          <div class="ratio-conc">${d.tga>0?'TGA '+d.tga+'%':'アセチル '+d.ac+'%'}</div>
+        </div>
+        <input type="number" class="ratio-inp" id="b-ratio-${k}" value="${ratios[k]||1}" min="0"
+          oninput="ratios['${k}']=parseFloat(this.value)||0;resetResult();updateBtns()">
+        ${colon}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ================================================================
+// A: マニュアル計算
+// ================================================================
+function onInputA(){ updateBtns(); resetResult(); }
+
+function calcA(){
+  const T = parseFloat(document.getElementById('a-total').value);
+  if(!T||T<=0) return;
+  const sumR = selDrugs.reduce((a,k)=>a+(ratios[k]||0),0);
+  if(sumR===0){ showErr('a','比率の合計が0です'); return; }
+
+  const amts = selDrugs.map(k=>({ drug:DRUGS[k], amt:T*(ratios[k]||0)/sumR }));
+  let pureTga=0, pureAc=0;
+  amts.forEach(a=>{ pureTga+=a.amt*a.drug.tga/100; pureAc+=a.amt*a.drug.ac/100; });
+  const totalConc=(pureTga+pureAc)/T*100;
+
+  showResult('a', totalConc, amts, pureTga/T*100, pureAc/T*100, T);
+}
+
+// ================================================================
+// B: 還元値から逆算
+// ================================================================
+function onInputB(){ updateBtns(); resetResult(); }
+
+function calcB(){
+  const T   = parseFloat(document.getElementById('b-total').value);
+  const tgt = parseFloat(document.getElementById('b-target').value);
+  if(!T||T<=0||isNaN(tgt)) return;
+  if(tgt<0.1||tgt>7.0){ showErr('b','目標還元値は0.1〜7.0%で入力してください'); return; }
+
+  const baseKeys = selDrugs.filter(k=>k!=='W');
+  if(!baseKeys.length){ showErr('b','ぷるぷるH または ぷるぷるS を選択してください'); return; }
+
+  // H+S両方選択時は比率で加重平均、単品は比率不要
+  let baseTga=0, baseAc=0;
+  if(baseKeys.length===2){
+    const sumBase = baseKeys.reduce((a,k)=>a+(ratios[k]||0),0)||1;
+    baseTga = baseKeys.reduce((a,k)=>a+(ratios[k]||0)*DRUGS[k].tga,0)/sumBase;
+    baseAc  = baseKeys.reduce((a,k)=>a+(ratios[k]||0)*DRUGS[k].ac, 0)/sumBase;
+  } else {
+    baseTga = DRUGS[baseKeys[0]].tga;
+    baseAc  = DRUGS[baseKeys[0]].ac;
+  }
+  const baseTot = baseTga + baseAc;
+
+  if(baseTot===0){ showErr('b','選択した薬剤に還元剤が含まれていません'); return; }
+  if(tgt>baseTot){ showErr('b',`目標値（${tgt}%）がベース剤濃度（${baseTot.toFixed(1)}%）を超えています`); return; }
+
+  // ベース剤量を逆算、残りがぷるぷる水
+  const baseTotal = T * tgt / baseTot;
+  const waterAmt  = T - baseTotal;
+
+  let amts = [];
+  if(baseKeys.length===2){
+    const sumBase = baseKeys.reduce((a,k)=>a+(ratios[k]||0),0)||1;
+    baseKeys.forEach(k=>{
+      amts.push({drug:DRUGS[k], amt:baseTotal*(ratios[k]||0)/sumBase});
+    });
+  } else {
+    amts.push({drug:DRUGS[baseKeys[0]], amt:baseTotal});
+  }
+  // 水は常に表示（0gでも表示して「水不要」を明示）
+  amts.push({drug:DRUGS.W, amt:waterAmt});
+
+  let pureTga=0, pureAc=0;
+  amts.forEach(a=>{ pureTga+=a.amt*a.drug.tga/100; pureAc+=a.amt*a.drug.ac/100; });
+  const totalConc=(pureTga+pureAc)/T*100;
+
+  showResult('b', totalConc, amts, pureTga/T*100, pureAc/T*100, T);
+}
+
+// ================================================================
+// 結果表示
+// ================================================================
+function showResult(mode, totalConc, amts, tga, ac, T){
+  const panel  = document.getElementById(`res-${mode}`);
+  const errEl  = document.getElementById(`res-${mode}-err`);
+  const okEl   = document.getElementById(`res-${mode}-ok`);
+  panel.classList.add('visible');
+  setTimeout(()=>panel.classList.add('show'),10);
+  errEl.style.display='none'; okEl.style.display='block';
+
+  document.getElementById(`${mode}-total-conc`).textContent = totalConc.toFixed(3);
+  document.getElementById(`${mode}-tga`).textContent = tga.toFixed(3);
+  document.getElementById(`${mode}-ac`).textContent  = ac.toFixed(3);
+
+  document.getElementById(`${mode}-amounts`).innerHTML = amts.map(a=>`
+    <div class="res-amt" style="--item-color:${a.drug.color}">
+      <div class="res-amt-label">${a.drug.name}</div>
+      <div><span class="res-amt-val">${a.amt.toFixed(1)}</span><span class="res-amt-unit">g</span></div>
+      <div class="res-amt-pct">${(a.amt/T*100).toFixed(1)}%</div>
+    </div>`).join('');
+
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showErr(m, msg){
+  const panel = document.getElementById(`res-${m}`);
+  panel.classList.add('visible','show','err');
+  document.getElementById(`res-${m}-err`).style.display='block';
+  document.getElementById(`res-${m}-err`).textContent='⚠ '+msg;
+  document.getElementById(`res-${m}-ok`).style.display='none';
+}
+
+function resetResult(){
+  ['a','b'].forEach(m=>{
+    const p = document.getElementById(`res-${m}`);
+    if(p) p.classList.remove('visible','show','err');
+  });
+}
+
+// ================================================================
+// ボタン有効化
+// ================================================================
+function updateBtns(){
+  const hasBase = selDrugs.filter(k=>k!=='W').length > 0;
+  const sumR    = selDrugs.reduce((a,k)=>a+(ratios[k]||0),0);
+  const tA      = parseFloat(document.getElementById('a-total').value);
+  const tB      = parseFloat(document.getElementById('b-total').value);
+  const tgt     = parseFloat(document.getElementById('b-target').value);
+  document.getElementById('calc-btn-a').disabled = !(hasBase && sumR>0 && tA>0);
+  document.getElementById('calc-btn-b').disabled = !(hasBase && tB>0 && tgt>=0.1 && tgt<=7.0);
+}
+
+// ================================================================
+// リセット
+// ================================================================
+function resetAll(){
+  selDrugs=[];
+  ratios={};
+  document.querySelectorAll('.drug-card').forEach(c=>c.classList.remove('selected'));
+  ['a-total','b-total','b-target'].forEach(id=>document.getElementById(id).value='');
+  renderRatios();
+  resetResult();
+  updateBtns();
+}
+
+// ================================================================
+// Toast
+// ================================================================
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
+}
+</script>
+</body>
+</html>
